@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>正在前往凑一局</title>
+  <meta name="description" content="凑一局游戏访问入口。">
+</head>
+<body>
+  <main>
+    <h1>正在前往凑一局</h1>
+    <p>若没有自动跳转，请点击：<a id="game-link" href="https://couyiju-access-test.pages.dev/">进入游戏</a></p>
+    <noscript><p>自动跳转需要启用 JavaScript，也可以点击上面的链接进入游戏。</p></noscript>
+  </main>
+  <script>
+    (() => {
+      const destination = new URL('https://couyiju-access-test.pages.dev');
+      destination.pathname = location.pathname;
+      destination.search = location.search;
+      destination.hash = location.hash;
+      document.getElementById('game-link').href = destination.href;
+      location.replace(destination.href);
+    })();
+  </script>
+</body>
+</html>
