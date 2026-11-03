@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#f5f2eb">
   <meta name="description" content="凑一局总站。查看服务器状态，前往最新游戏入口，也欢迎在小红书关注疯不觉。">
   <title>凑一局总站</title>
-  <link rel="stylesheet" href="/assets/site.css?v=portal-2">
-  <script src="/assets/site.js?v=portal-1" defer></script>
+  <link rel="stylesheet" href="/assets/site.css?v=portal-3">
+  <script src="/assets/site.js?v=portal-3" defer></script>
 </head>
 <body>
   <div class="page">
@@ -28,6 +28,11 @@
             <p id="status-message" class="status-message">请连接梯子</p>
             <p id="status-detail" class="status-detail">暂时无法确认服务器状态，仍可点击下方入口尝试访问。</p>
           </div>
+          <dl id="server-metrics" class="server-metrics" aria-label="服务器运行概况" hidden>
+            <div><dt title="游戏服务进程当前使用的物理内存，不是整台服务器的内存占用">游戏进程内存</dt><dd id="server-memory">—</dd></div>
+            <div><dt title="从当前浏览器请求服务器到收到状态响应的耗时，受当前网络影响">访问耗时</dt><dd id="server-latency">—</dd></div>
+            <div><dt title="当前游戏服务进程的运行时长，发布或重启后重新计时">连续运行</dt><dd id="server-uptime">—</dd></div>
+          </dl>
           <a id="game-link" class="primary-link" href="https://hk.couyiju-fonjure.dns.army/">进入凑一局</a>
           <div class="status-actions">
             <span id="checked-at" class="checked-at">点击后才会前往游戏</span>

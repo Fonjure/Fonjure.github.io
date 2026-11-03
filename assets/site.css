@@ -46,6 +46,10 @@ h2 { margin: 0; font-size: 22px; line-height: 1.5; font-weight: 700; }
 .server-status[data-state="online"] .status-dot { background: var(--green); }
 .server-status[data-state="online"] .status-line { color: var(--green); }
 .server-status[data-state="maintenance"] .status-dot, .server-status[data-state="unavailable"] .status-dot { background: #a17c36; }
+.server-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: -4px 0 26px; padding: 17px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.server-metrics div { min-width: 0; }
+.server-metrics dt { color: var(--muted); font-size: 11px; }
+.server-metrics dd { margin: 5px 0 0; font-size: 16px; font-weight: 650; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .primary-link { display: flex; min-height: 54px; align-items: center; justify-content: center; border: 1px solid var(--accent); border-radius: 10px; background: var(--accent); color: white; text-decoration: none; font-size: 17px; font-weight: 650; }
 .primary-link:hover { background: #923b2f; }
 .primary-link[aria-disabled="true"] { background: #e5e4dc; color: #72756d; border-color: #e5e4dc; cursor: default; }
@@ -82,6 +86,8 @@ h2 { margin: 0; font-size: 22px; line-height: 1.5; font-weight: 700; }
   h2 { font-size: 20px; }
   .server-status { margin: 26px 0 24px; min-height: 128px; }
   .status-message { font-size: 22px; }
+  .server-metrics { gap: 8px; }
+  .server-metrics dd { font-size: 14px; }
   .bookmark-note { margin-top: 20px; padding-top: 19px; }
   .follow-panel { padding: 25px 23px; }
   .profile-image-link { width: 240px; }

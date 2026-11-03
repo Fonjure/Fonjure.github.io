@@ -5,6 +5,7 @@
   const byId = (id) => document.getElementById(id);
   const status = byId('server-status'), title = byId('status-title'), message = byId('status-message'), detail = byId('status-detail');
   const gameLink = byId('game-link'), retry = byId('retry-status'), checkedAt = byId('checked-at');
+  const metrics = byId('server-metrics');
   let checking = false;
   let currentOrigin = DEFAULT_ORIGIN;
 
@@ -22,6 +23,18 @@
     return url.href;
   }
   function text(value, fallback) { return typeof value === 'string' && value.trim() ? value.trim().slice(0, 240) : fallback; }
+  const nonnegative = (value) => typeof value === 'number' && Number.isFinite(value) && value >= 0;
+  function showMetrics(health, elapsed) {
+    if (!metrics) return;
+    const bytes = health.memory?.rssBytes;
+    byId('server-memory').textContent = nonnegative(bytes) ? `${(bytes / 1024 ** 2).toLocaleString('zh-CN', { maximumFractionDigits: 1 })} MB` : '—';
+    byId('server-latency').textContent = nonnegative(elapsed) ? `${Math.max(1, Math.round(elapsed)).toLocaleString('zh-CN')} ms` : '—';
+    const seconds = health.uptimeSeconds;
+    const minutes = nonnegative(seconds) ? Math.floor(seconds / 60) : null;
+    byId('server-uptime').textContent = minutes === null ? '—' : minutes < 1 ? '不足 1 分钟' : minutes < 60 ? `${minutes} 分钟`
+      : minutes < 1440 ? `${Math.floor(minutes / 60)} 小时` : `${Math.floor(minutes / 1440)} 天 ${Math.floor(minutes / 60) % 24} 小时`;
+    metrics.hidden = false;
+  }
   function entryEnabled(enabled, origin = DEFAULT_ORIGIN) {
     if (enabled) {
       gameLink.href = destination(origin);
@@ -60,6 +73,10 @@
     retry.hidden = false;
     retry.disabled = true;
     retry.textContent = '检测中';
+    if (metrics) {
+      metrics.hidden = true;
+      ['server-memory', 'server-latency', 'server-uptime'].forEach((id) => { byId(id).textContent = '—'; });
+    }
     checkedAt.textContent = '点击后才会前往游戏';
     show('checking', '正在检查', '稍等一下', '正在确认最新服务器的连接状态。');
     const controller = new AbortController();
@@ -73,8 +90,10 @@
         show('maintenance', '维护中', '我们很快回来', config.maintenanceMessage);
         return;
       }
+      const started = performance.now();
       const response = await fetch(`${config.serverOrigin}/health`, { cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer', mode: 'cors', signal: controller.signal });
       const health = await response.json().catch(() => null);
+      const elapsed = performance.now() - started;
       if (health?.maintenance === true || health?.status === 'maintenance') {
         entryEnabled(false);
         show('maintenance', '维护中', '我们很快回来', text(health.maintenanceMessage || health.message, '服务器正在维护，请稍后再来。'));
@@ -83,6 +102,7 @@
       } else if (health?.service === 'couyiju-server' && health?.protocol === 1 && health?.runtime === 'node') {
         if (['status', 'database', 'rooms', 'storage'].every((key) => health[key] === 'ok')) {
           show('online', '服务器运行正常', '可以开一局了', '叫上朋友，点击下方入口一起玩。');
+          showMetrics(health, elapsed);
         } else {
           show('unavailable', '服务暂不可用', '稍后再来试试', '服务器暂时没有恢复正常，请稍后重新检测。');
         }
