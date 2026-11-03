@@ -3,24 +3,64 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>正在前往凑一局</title>
-  <meta name="description" content="凑一局游戏访问入口。">
+  <meta name="theme-color" content="#f5f2eb">
+  <meta name="description" content="凑一局总站。查看服务器状态，前往最新游戏入口，也欢迎在小红书关注疯不觉。">
+  <title>凑一局总站</title>
+  <link rel="stylesheet" href="/assets/site.css?v=portal-1">
+  <script src="/assets/site.js?v=portal-1" defer></script>
 </head>
 <body>
-  <main>
-    <h1>正在前往凑一局</h1>
-    <p>若没有自动跳转，请点击：<a id="game-link" href="https://hk.couyiju-fonjure.dns.army/">进入游戏</a></p>
-    <noscript><p>自动跳转需要启用 JavaScript，也可以点击上面的链接进入游戏。</p></noscript>
-  </main>
-  <script>
-    (() => {
-      const destination = new URL('https://hk.couyiju-fonjure.dns.army');
-      destination.pathname = location.pathname;
-      destination.search = location.search;
-      destination.hash = location.hash;
-      document.getElementById('game-link').href = destination.href;
-      location.replace(destination.href);
-    })();
-  </script>
+  <div class="page">
+    <header class="site-header">
+      <a class="wordmark" href="/" aria-label="凑一局总站首页">凑一局<span>总站</span></a>
+      <span class="site-address">fonjure.github.io</span>
+    </header>
+    <main>
+      <div class="introduction">
+        <p class="eyebrow">一起玩点有意思的</p>
+        <h1>凑一局总站</h1>
+        <p class="introduction-copy">最新入口和服务器状态，都放在这里。</p>
+      </div>
+      <div class="content-grid">
+        <section class="server-panel panel" aria-labelledby="server-heading">
+          <div class="section-heading">
+            <h2 id="server-heading">最新服务器</h2>
+            <span id="server-name" class="server-name">香港服务器</span>
+          </div>
+          <div id="server-status" class="server-status" data-state="failed" aria-live="polite" aria-atomic="true">
+            <div class="status-line"><span class="status-dot" aria-hidden="true"></span><strong id="status-title">连接失败</strong></div>
+            <p id="status-message" class="status-message">请连接梯子</p>
+            <p id="status-detail" class="status-detail">暂时无法确认服务器状态，仍可点击下方入口尝试访问。</p>
+          </div>
+          <a id="game-link" class="primary-link" href="https://hk.couyiju-fonjure.dns.army/">进入凑一局</a>
+          <div class="status-actions">
+            <span id="checked-at" class="checked-at">点击后才会前往游戏</span>
+            <button id="retry-status" class="text-button" type="button" hidden>重新检测</button>
+          </div>
+          <noscript><p class="no-script">请连接梯子。当前浏览器未启用 JavaScript，可以直接点击上方入口进入游戏。</p></noscript>
+          <div class="bookmark-note">
+            <strong>记住这个网址就好</strong>
+            <p>收藏 <span class="inline-address">fonjure.github.io</span>，以后也从这里找到最新服务器。</p>
+          </div>
+        </section>
+        <section class="follow-panel panel" aria-labelledby="follow-heading">
+          <h2 id="follow-heading">在小红书找我</h2>
+          <p class="follow-copy">欢迎关注<span class="author-name">疯不觉</span>。<br>偶尔会在小红书同步凑一局的最新进展。</p>
+          <a class="profile-image-link" href="/assets/xiaohongshu.jpg" target="_blank" rel="noopener" aria-label="查看疯不觉的小红书二维码原图">
+            <img class="profile-image" src="/assets/xiaohongshu.jpg" width="987" height="1347" alt="疯不觉的小红书个人名片，含扫码关注二维码，小红书号 841618732">
+          </a>
+          <p class="image-caption">点图片查看原图，手机可长按保存</p>
+          <div class="profile-actions">
+            <label class="account-id-label" for="xiaohongshu-id">小红书号</label>
+            <input id="xiaohongshu-id" class="account-id" value="841618732" readonly aria-label="小红书号 841618732">
+            <button id="copy-id" class="text-button" type="button">复制</button>
+          </div>
+          <p id="copy-feedback" class="copy-feedback" aria-live="polite"></p>
+          <a class="save-image" href="/assets/xiaohongshu.jpg" download="疯不觉-小红书名片.jpg">保存小红书名片</a>
+        </section>
+      </div>
+    </main>
+    <footer class="site-footer">和朋友凑一局，慢慢玩。</footer>
+  </div>
 </body>
 </html>
