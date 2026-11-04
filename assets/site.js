@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const DEFAULT_ORIGIN = 'https://hk.couyiju-fonjure.dns.army';
+  const DEFAULT_ORIGIN = 'https://couyiju.47-76-72-151.sslip.io';
   const DEFAULT_CONFIG = { serverOrigin: DEFAULT_ORIGIN, serverName: '香港服务器', maintenance: false, maintenanceMessage: '服务器正在维护，请稍后再来。' };
   const byId = (id) => document.getElementById(id);
   const status = byId('server-status'), title = byId('status-title'), message = byId('status-message'), detail = byId('status-detail');

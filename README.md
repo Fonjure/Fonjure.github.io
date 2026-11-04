@@ -2,7 +2,7 @@
 
 [fonjure.github.io](https://fonjure.github.io/) 是凑一局的固定入口。它显示最新服务器的公开连接状态、手动进入游戏的按钮，以及作者疯不觉的小红书名片。页面不会自动跳转；旧域名的提示页引导玩家回到本站，避免更换服务器后收藏失效。
 
-当前游戏服务器是[香港主站](https://hk.couyiju-fonjure.dns.army/)。游戏源码与部署流程保存在另一个私有仓库 `Fonjure/couyiju`；此公开仓库只有门户静态文件，不含游戏源码、题库、账号、会话、记录、密钥或数据库。
+当前游戏服务器是[香港主站](https://couyiju.47-76-72-151.sslip.io/)。游戏源码与部署流程保存在另一个私有仓库 `Fonjure/couyiju`；此公开仓库只有门户静态文件，不含游戏源码、题库、账号、会话、记录、密钥或数据库。
 
 ## 文件结构
 
@@ -20,7 +20,7 @@
 
 ```json
 {
-  "serverOrigin": "https://hk.couyiju-fonjure.dns.army",
+  "serverOrigin": "https://couyiju.47-76-72-151.sslip.io",
   "serverName": "香港服务器",
   "maintenance": false,
   "maintenanceMessage": "服务器正在维护，请稍后再来。"
@@ -54,4 +54,4 @@ Windows PowerShell 中可用已安装的静态 HTTP 服务预览此目录；不�
 
 发布前检查 JSON、脚本语法、手机布局、无 JavaScript 回退、健康/维护/连接失败状态和邀请链接保留。将所需文件提交并推送到本仓库 `main`，等待 GitHub Pages 部署成功；再检查线上总站没有自动跳走、图片与手动进入按钮正常。
 
-小红书名片替换时应保留原始二维码。更新 HTML/CSS/JS 后，必要时递增 HTML 中的静态资源版本（当前 `?v=portal-3`）；`404.html` 与 `index.html` 保持一致。
+小红书名片替换时应保留原始二维码。更新 HTML/CSS/JS 后，必要时递增 HTML 中的静态资源版本（当前 `?v=portal-4`）；`404.html` 与 `index.html` 保持一致。
