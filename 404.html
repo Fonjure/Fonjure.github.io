@@ -6,14 +6,13 @@
   <meta name="theme-color" content="#f5f2eb">
   <meta name="description" content="凑一局总站。查看服务器状态，前往最新游戏入口，也欢迎在小红书关注疯不觉。">
   <title>凑一局总站</title>
-  <link rel="stylesheet" href="/assets/site.css?v=portal-5">
-  <script src="/assets/site.js?v=portal-5" defer></script>
+  <link rel="stylesheet" href="/assets/site.css?v=portal-7">
+  <script src="/assets/site.js?v=portal-7" defer></script>
 </head>
 <body>
   <div class="page">
     <main>
       <div class="introduction">
-        <p class="eyebrow">一起玩点有意思的</p>
         <h1>凑一局总站</h1>
         <p class="introduction-copy">最新入口和服务器状态，都放在这里。</p>
       </div>
@@ -23,12 +22,11 @@
             <h2 id="server-heading">最新服务器</h2>
             <span id="server-name" class="server-name">香港服务器</span>
           </div>
-          <div id="server-status" class="server-status" data-state="failed" aria-live="polite" aria-atomic="true">
-            <div class="status-line"><span class="status-dot" aria-hidden="true"></span><strong id="status-title">连接失败</strong></div>
-            <p id="status-message" class="status-message">换条路，照样开局</p>
-            <p id="status-detail" class="status-detail">看看哪条入口更顺，也可以自己选一条试试。</p>
+          <div id="server-status" class="server-status" data-state="checking" aria-live="polite" aria-atomic="true">
+            <div class="status-line"><span class="status-dot" aria-hidden="true"></span><strong id="status-title">等待检测</strong></div>
+            <p id="status-message" class="status-message" hidden></p>
+            <p id="status-detail" class="status-detail" hidden></p>
           </div>
-          <p class="entry-selection-hint">帮你挑条快的，也能自己选。</p>
           <div id="entry-options" class="entry-options" role="radiogroup" aria-label="选择游戏入口" aria-describedby="entry-account-note">
             <label class="entry-option selected" data-entry-id="sslip" data-state="checking">
               <input type="radio" name="game-entry" value="sslip" checked>
@@ -57,7 +55,7 @@
           </dl>
           <a id="game-link" class="primary-link" href="https://couyiju.47-76-72-151.sslip.io/">进入凑一局</a>
           <div class="status-actions">
-            <span id="checked-at" class="checked-at">点击后才会前往游戏</span>
+            <span id="checked-at" class="checked-at">检测中…</span>
             <button id="retry-status" class="text-button" type="button" hidden>重新检测</button>
           </div>
           <noscript><p class="no-script">当前浏览器未启用 JavaScript，可以直接选择：<a href="https://couyiju.47-76-72-151.sslip.io/">入口一</a> · <a href="https://hk.couyiju-fonjure.dns.army/">入口二</a>。</p></noscript>

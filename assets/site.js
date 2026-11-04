@@ -83,8 +83,10 @@
   function show(state, heading, mainMessage, explanation) {
     status.dataset.state = state;
     title.textContent = heading;
-    message.textContent = mainMessage;
-    detail.textContent = explanation;
+    message.textContent = mainMessage || '';
+    message.hidden = !mainMessage;
+    detail.textContent = explanation || '';
+    detail.hidden = !explanation;
     status.setAttribute('aria-busy', state === 'checking' ? 'true' : 'false');
   }
   function recommendedEntry() {
@@ -129,12 +131,12 @@
     if (config.maintenance) {
       show('maintenance', '维护中', '我们很快回来', config.maintenanceMessage);
     } else if (selected.state === 'online') {
-      show('online', '连接顺畅', '可以开一局了', `${selected.name}已连上，叫上朋友一起玩。${entries.some((entry) => entry.state === 'checking') ? '另一个入口还在检测。' : ''}`);
+      show('online', '连接顺畅');
       showMetrics(selected.health, selected.elapsed);
     } else if (selected.state === 'maintenance') {
       show('maintenance', '这个入口维护中', entries.some((entry) => entry.state !== 'maintenance') ? '换个入口试试' : '我们很快回来', selected.maintenanceMessage || '这个入口正在维护，稍后再来。');
     } else if (selected.state === 'checking') {
-      show('checking', '正在检测入口', '找条顺畅的路', '检测期间也可以手动选择入口，点击后才会前往游戏。');
+      show('checking', '正在检测入口');
     } else if (selected.state === 'unavailable') {
       show('unavailable', '这个入口暂不可用', '换个入口试试', '可以选择另一个入口，或稍后重新检测；也可直接尝试进入。');
     } else {
@@ -193,7 +195,7 @@
     retry.disabled = true;
     retry.textContent = '检测中';
     entries = freshEntries(entries);
-    checkedAt.textContent = '点击后才会前往游戏';
+    checkedAt.textContent = '检测中…';
     render();
     try {
       const next = await readConfig();
@@ -206,7 +208,7 @@
       retry.disabled = false;
       retry.textContent = '重新检测';
       const time = new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit' }).format(new Date());
-      checkedAt.textContent = `${time} 更新 · 点击后才会前往游戏`;
+      checkedAt.textContent = `${time} 更新`;
       render();
     }
   }

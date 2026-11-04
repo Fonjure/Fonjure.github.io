@@ -131,6 +131,16 @@ const done = async (page) => {
 };
 const linkOrigin = async (page) => new URL(await gameLink(page).getAttribute('href')).origin;
 
+test('checking shows a compact status line and a short timestamp', async () => {
+  const portal = await openPortal({ health: () => ({ mode: 'hang' }) });
+  try {
+    await expect(portal.page.locator('#status-message')).toBeHidden();
+    await expect(portal.page.locator('#status-detail')).toBeHidden();
+    await expect(portal.page.locator('#checked-at')).toHaveText('检测中…');
+    await expect(radio(portal.page, 'sslip')).toBeChecked();
+  } finally { await portal.close(); }
+});
+
 test('a fast healthy entry is selected while the other entry is still timing out', { timeout: 15000 }, async () => {
   const started = Date.now();
   const portal = await openPortal({ health: (id) => id === 'sslip' ? { mode: 'hang' } : { delay: 60 } });
@@ -213,6 +223,8 @@ test('global maintenance disables all choices and skips health requests', async 
     assert.equal(await gameLink(portal.page).getAttribute('href'), null);
     for (const { id } of ENTRIES) await expect(radio(portal.page, id)).toBeDisabled();
     assert.deepEqual(portal.calls, []);
+    await expect(portal.page.locator('#status-detail')).toBeVisible();
+    await expect(portal.page.locator('#status-detail')).toHaveText('正在做一次短暂维护。');
   } finally { await portal.close(); }
 });
 
@@ -221,6 +233,8 @@ test('failed checks retain manual entry choices without claiming a proxy is requ
   try {
     await done(portal.page);
     await expect(portal.page.locator('#server-status')).not.toContainText('梯子');
+    await expect(portal.page.locator('#status-detail')).toBeVisible();
+    await expect(portal.page.locator('#status-detail')).toContainText('手动选择入口');
     for (const { id } of ENTRIES) {
       await expect(radio(portal.page, id)).toBeEnabled();
       await expect(recommended(portal.page, id)).toBeHidden();
@@ -312,6 +326,15 @@ for (const width of [320, 375, 1280, 3840]) {
     const portal = await openPortal({ viewport: { width, height: 1000 } });
     try {
       await done(portal.page);
+      await expect(portal.page.locator('.eyebrow, .entry-selection-hint')).toHaveCount(0);
+      await expect(portal.page.locator('#status-message')).toBeHidden();
+      await expect(portal.page.locator('#status-detail')).toBeHidden();
+      await expect(portal.page.locator('#checked-at')).toHaveText(/^\d{2}:\d{2} 更新$/);
+      const copy = await portal.page.locator('body').innerText();
+      assert.doesNotMatch(copy, /一起玩点有意思的|可以开一局了|已连上，叫上朋友一起玩|帮你挑条快的，也能自己选|点击后才会前往游戏/);
+      const statusBox = await portal.page.locator('#server-status').boundingBox();
+      const entryBox = await portal.page.locator('#entry-options').boundingBox();
+      assert.ok(statusBox.height < 40 && entryBox.y - statusBox.y - statusBox.height <= 22, 'a healthy status must not leave an empty headline area above the entries');
       const dimensions = await portal.page.evaluate(() => ({
         viewport: document.documentElement.clientWidth,
         html: document.documentElement.scrollWidth,
