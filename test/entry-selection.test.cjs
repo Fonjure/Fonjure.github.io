@@ -7,10 +7,12 @@ const { chromium, expect } = require(process.env.PLAYWRIGHT_MODULE || '@playwrig
 
 // Run against a local copy only. Every request to an external origin is intercepted.
 const ROOT = path.resolve(__dirname, '..');
+const PRIMARY = { id: 'xyz', name: '正式入口', origin: 'https://couyiju.xyz' };
 const ENTRIES = [
-  { id: 'sslip', name: '入口一', origin: 'https://couyiju.47-76-72-151.sslip.io' },
-  { id: 'hk', name: '入口二', origin: 'https://hk.couyiju-fonjure.dns.army' },
+  { id: 'sslip', name: '备用入口一', origin: 'https://couyiju.47-76-72-151.sslip.io' },
+  { id: 'hk', name: '备用入口二', origin: 'https://hk.couyiju-fonjure.dns.army' },
 ];
+const ALL_ENTRIES = [PRIMARY, ...ENTRIES];
 const HEALTH = {
   service: 'couyiju-server', protocol: 1, runtime: 'node',
   status: 'ok', storage: 'ok', database: 'ok', rooms: 'ok',
@@ -57,8 +59,8 @@ after(async () => {
 
 async function openPortal(options = {}) {
   const config = {
-    serverOrigin: ENTRIES[0].origin, serverName: '香港服务器',
-    entries: ENTRIES.map((entry) => ({ ...entry })), maintenance: false,
+    serverOrigin: PRIMARY.origin, serverName: '香港服务器', preferredEntry: PRIMARY.id,
+    entries: ALL_ENTRIES.map((entry) => ({ ...entry })), maintenance: false,
     maintenanceMessage: '正在做一次短暂维护。', ...options.config,
   };
   const context = await browser.newContext({
@@ -84,7 +86,7 @@ async function openPortal(options = {}) {
       await route.abort('blockedbyclient');
       return;
     }
-    const entry = config.entries.find((item) => item.origin === url.origin) || ENTRIES.find((item) => item.origin === url.origin);
+    const entry = config.entries.find((item) => item.origin === url.origin) || ALL_ENTRIES.find((item) => item.origin === url.origin);
     if (!entry) {
       unexpected.push(request.url());
       await route.abort('blockedbyclient');
@@ -131,19 +133,82 @@ const done = async (page) => {
 };
 const linkOrigin = async (page) => new URL(await gameLink(page).getAttribute('href')).origin;
 
-test('checking shows a compact status line and a short timestamp', async () => {
+test('the formal entry is selected before detection finishes', async () => {
   const portal = await openPortal({ health: () => ({ mode: 'hang' }) });
   try {
+    await expect(radio(portal.page, 'xyz')).toBeChecked();
+    assert.equal(await linkOrigin(portal.page), PRIMARY.origin);
+    await expect(recommended(portal.page, 'xyz')).toBeHidden();
     await expect(portal.page.locator('#status-message')).toBeHidden();
     await expect(portal.page.locator('#status-detail')).toBeHidden();
     await expect(portal.page.locator('#checked-at')).toHaveText('检测中…');
+  } finally { await portal.close(); }
+});
+
+test('a healthy formal entry stays preferred even when both backups respond faster', async () => {
+  const portal = await openPortal({ health: (id) => ({ delay: id === 'xyz' ? 400 : id === 'sslip' ? 30 : 90 }) });
+  try {
+    await done(portal.page);
+    await expect(radio(portal.page, 'xyz')).toBeChecked();
+    await expect(recommended(portal.page, 'xyz')).toBeVisible();
+    for (const { id } of ENTRIES) await expect(recommended(portal.page, id)).toBeHidden();
+    assert.equal(await linkOrigin(portal.page), PRIMARY.origin);
+    const timing = await portal.page.locator('#entry-latency-xyz').innerText();
+    assert.ok(Number(timing.replace(/[^\d.]/g, '')) >= 300, 'the preferred entry must not merely be the fastest reply');
+  } finally { await portal.close(); }
+});
+
+test('a failed formal entry falls back to the faster healthy backup', async () => {
+  const portal = await openPortal({ health: (id) => id === 'xyz' ? { mode: 'abort' } : { delay: id === 'sslip' ? 250 : 40 } });
+  try {
+    await done(portal.page);
+    await expect(radio(portal.page, 'hk')).toBeChecked();
+    await expect(recommended(portal.page, 'hk')).toBeVisible();
+    await expect(recommended(portal.page, 'xyz')).toBeHidden();
+    assert.equal(await linkOrigin(portal.page), ENTRIES[1].origin);
+  } finally { await portal.close(); }
+});
+
+test('maintenance at the formal entry leaves both backups available', async () => {
+  const portal = await openPortal({ health: (id) => id === 'xyz'
+    ? { status: 503, body: { maintenance: true, status: 'maintenance' } }
+    : { delay: id === 'sslip' ? 35 : 120 } });
+  try {
+    await done(portal.page);
+    await expect(radio(portal.page, 'xyz')).toBeDisabled();
+    for (const { id } of ENTRIES) await expect(radio(portal.page, id)).toBeEnabled();
+    await expect(radio(portal.page, 'sslip')).toBeChecked();
+    await expect(recommended(portal.page, 'sslip')).toBeVisible();
+    assert.equal(await linkOrigin(portal.page), ENTRIES[0].origin);
+  } finally { await portal.close(); }
+});
+
+test('a manual backup choice is not replaced when the formal entry becomes healthy', async () => {
+  const portal = await openPortal({ health: (id) => ({ delay: id === 'xyz' ? 450 : 120 }) });
+  try {
+    await radio(portal.page, 'hk').check();
+    await done(portal.page);
+    await expect(recommended(portal.page, 'xyz')).toBeVisible();
+    await expect(radio(portal.page, 'hk')).toBeChecked();
+    assert.equal(await linkOrigin(portal.page), ENTRIES[1].origin);
+  } finally { await portal.close(); }
+});
+
+test('a healthy backup is usable while the formal entry is still timing out', { timeout: 15000 }, async () => {
+  const portal = await openPortal({ health: (id) => id === 'xyz' ? { mode: 'hang' } : { delay: id === 'sslip' ? 45 : 150 } });
+  try {
+    await expect(radio(portal.page, 'sslip')).toBeChecked({ timeout: 2000 });
+    await expect(recommended(portal.page, 'sslip')).toBeVisible();
+    assert.equal(await linkOrigin(portal.page), ENTRIES[0].origin);
+    await expect(gameLink(portal.page)).not.toHaveAttribute('aria-disabled', 'true');
+    await done(portal.page);
     await expect(radio(portal.page, 'sslip')).toBeChecked();
   } finally { await portal.close(); }
 });
 
 test('a fast healthy entry is selected while the other entry is still timing out', { timeout: 15000 }, async () => {
   const started = Date.now();
-  const portal = await openPortal({ health: (id) => id === 'sslip' ? { mode: 'hang' } : { delay: 60 } });
+  const portal = await openPortal({ config: { entries: ENTRIES }, health: (id) => id === 'sslip' ? { mode: 'hang' } : { delay: 60 } });
   try {
     await expect(radio(portal.page, 'hk')).toBeChecked({ timeout: 2000 });
     assert.ok(Date.now() - started < 2500, 'a successful health response must enable the chosen entry promptly');
@@ -157,7 +222,7 @@ test('a fast healthy entry is selected while the other entry is still timing out
 });
 
 test('two healthy entries recommend and select the lower measured latency', async () => {
-  const portal = await openPortal({ health: (id) => ({ delay: id === 'sslip' ? 320 : 60 }) });
+  const portal = await openPortal({ config: { entries: ENTRIES }, health: (id) => ({ delay: id === 'sslip' ? 320 : 60 }) });
   try {
     await done(portal.page);
     await expect(radio(portal.page, 'hk')).toBeChecked();
@@ -174,7 +239,7 @@ test('two healthy entries recommend and select the lower measured latency', asyn
 });
 
 test('a manual choice during detection survives later automatic results', async () => {
-  const portal = await openPortal({ health: (id) => ({ delay: id === 'sslip' ? 180 : 550 }) });
+  const portal = await openPortal({ config: { entries: ENTRIES }, health: (id) => ({ delay: id === 'sslip' ? 180 : 550 }) });
   try {
     await radio(portal.page, 'hk').check();
     await done(portal.page);
@@ -185,7 +250,7 @@ test('a manual choice during detection survives later automatic results', async 
 });
 
 test('a retry clears obsolete recommendations and picks the newly faster entry', async () => {
-  const portal = await openPortal({ health: (id, count) => ({ delay: count === 1 ? (id === 'sslip' ? 40 : 180) : (id === 'sslip' ? 450 : 220) }) });
+  const portal = await openPortal({ config: { entries: ENTRIES }, health: (id, count) => ({ delay: count === 1 ? (id === 'sslip' ? 40 : 180) : (id === 'sslip' ? 450 : 220) }) });
   try {
     await done(portal.page);
     await expect(recommended(portal.page, 'sslip')).toBeVisible();
@@ -203,7 +268,7 @@ test('a retry clears obsolete recommendations and picks the newly faster entry',
 });
 
 test('maintenance at one entry leaves the other entry usable', async () => {
-  const portal = await openPortal({ health: (id) => id === 'sslip'
+  const portal = await openPortal({ config: { entries: ENTRIES }, health: (id) => id === 'sslip'
     ? { status: 503, body: { status: 'maintenance', maintenance: true }, delay: 20 }
     : { delay: 100 } });
   try {
@@ -221,7 +286,7 @@ test('global maintenance disables all choices and skips health requests', async 
   try {
     await expect(gameLink(portal.page)).toHaveAttribute('aria-disabled', 'true');
     assert.equal(await gameLink(portal.page).getAttribute('href'), null);
-    for (const { id } of ENTRIES) await expect(radio(portal.page, id)).toBeDisabled();
+    for (const { id } of ALL_ENTRIES) await expect(radio(portal.page, id)).toBeDisabled();
     assert.deepEqual(portal.calls, []);
     await expect(portal.page.locator('#status-detail')).toBeVisible();
     await expect(portal.page.locator('#status-detail')).toHaveText('正在做一次短暂维护。');
@@ -235,11 +300,11 @@ test('failed checks retain manual entry choices without claiming a proxy is requ
     await expect(portal.page.locator('#server-status')).not.toContainText('梯子');
     await expect(portal.page.locator('#status-detail')).toBeVisible();
     await expect(portal.page.locator('#status-detail')).toContainText('手动选择入口');
-    for (const { id } of ENTRIES) {
+    for (const { id } of ALL_ENTRIES) {
       await expect(radio(portal.page, id)).toBeEnabled();
       await expect(recommended(portal.page, id)).toBeHidden();
       await radio(portal.page, id).check();
-      assert.equal(await linkOrigin(portal.page), ENTRIES.find((entry) => entry.id === id).origin);
+      assert.equal(await linkOrigin(portal.page), ALL_ENTRIES.find((entry) => entry.id === id).origin);
     }
     await expect(gameLink(portal.page)).not.toHaveAttribute('aria-disabled', 'true');
   } finally { await portal.close(); }
@@ -275,13 +340,13 @@ test('trusted configuration may supply a future valid HTTPS entry', async () => 
   } finally { await portal.close(); }
 });
 
-test('configuration failure uses both built-in entries', async () => {
+test('configuration failure uses all three built-in entries and prefers the formal entry', async () => {
   const portal = await openPortal({ configFailure: true, health: (id) => ({ delay: id === 'sslip' ? 25 : 100 }) });
   try {
     await done(portal.page);
-    for (const { id } of ENTRIES) await expect(radio(portal.page, id)).toBeVisible();
-    assert.deepEqual([...new Set(portal.calls.map((call) => call.origin))].sort(), ENTRIES.map((entry) => entry.origin).sort());
-    assert.equal(await linkOrigin(portal.page), ENTRIES[0].origin);
+    for (const { id } of ALL_ENTRIES) await expect(radio(portal.page, id)).toBeVisible();
+    assert.deepEqual([...new Set(portal.calls.map((call) => call.origin))].sort(), ALL_ENTRIES.map((entry) => entry.origin).sort());
+    assert.equal(await linkOrigin(portal.page), PRIMARY.origin);
   } finally { await portal.close(); }
 });
 
@@ -291,7 +356,7 @@ test('entry switching and hash changes retain invitation data without following 
   try {
     await done(portal.page);
     const expected = new URL(invite, base);
-    for (const entry of ENTRIES) {
+    for (const entry of ALL_ENTRIES) {
       await radio(portal.page, entry.id).check();
       const actual = new URL(await gameLink(portal.page).getAttribute('href'));
       assert.equal(actual.origin, entry.origin);
@@ -321,8 +386,8 @@ for (const filename of ['index.html', '404.html']) {
   });
 }
 
-for (const width of [320, 375, 1280, 3840]) {
-  test(`both entries remain usable without horizontal overflow at ${width}px`, async () => {
+for (const width of [320, 375, 850, 1280, 3840]) {
+  test(`all three entries remain usable without horizontal overflow at ${width}px`, async () => {
     const portal = await openPortal({ viewport: { width, height: 1000 } });
     try {
       await done(portal.page);
@@ -331,7 +396,7 @@ for (const width of [320, 375, 1280, 3840]) {
       await expect(portal.page.locator('#status-detail')).toBeHidden();
       await expect(portal.page.locator('#checked-at')).toHaveText(/^\d{2}:\d{2} 更新$/);
       const copy = await portal.page.locator('body').innerText();
-      assert.doesNotMatch(copy, /一起玩点有意思的|可以开一局了|已连上，叫上朋友一起玩|帮你挑条快的，也能自己选|点击后才会前往游戏/);
+      assert.doesNotMatch(copy, /一起玩点有意思的|可以开一局了|已连上，叫上朋友一起玩|帮你挑条快的，也能自己选|正式入口优先，备用入口也能自己选|点击后才会前往游戏/);
       const statusBox = await portal.page.locator('#server-status').boundingBox();
       const entryBox = await portal.page.locator('#entry-options').boundingBox();
       assert.ok(statusBox.height < 40 && entryBox.y - statusBox.y - statusBox.height <= 22, 'a healthy status must not leave an empty headline area above the entries');
@@ -341,7 +406,7 @@ for (const width of [320, 375, 1280, 3840]) {
         body: document.body.scrollWidth,
       }));
       assert.ok(dimensions.html <= dimensions.viewport + 1 && dimensions.body <= dimensions.viewport + 1, JSON.stringify(dimensions));
-      for (const { id } of ENTRIES) {
+      for (const { id } of ALL_ENTRIES) {
         await expect(radio(portal.page, id)).toBeVisible();
         await radio(portal.page, id).check();
       }
@@ -351,11 +416,11 @@ for (const width of [320, 375, 1280, 3840]) {
   });
 }
 
-test('without JavaScript both static game entry links remain available', async () => {
+test('without JavaScript all three static game entry links remain available', async () => {
   const portal = await openPortal({ javaScriptEnabled: false, viewport: { width: 375, height: 900 } });
   try {
     const hrefs = await portal.page.locator('a[href]').evaluateAll((links) => links.map((link) => link.href));
-    for (const { origin } of ENTRIES) {
+    for (const { origin } of ALL_ENTRIES) {
       assert.ok(hrefs.some((href) => new URL(href).origin === origin), `missing no-JavaScript link for ${origin}`);
     }
     assert.deepEqual(portal.calls, []);

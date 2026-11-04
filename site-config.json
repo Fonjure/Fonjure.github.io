@@ -1,9 +1,11 @@
 {
-  "serverOrigin": "https://couyiju.47-76-72-151.sslip.io",
+  "serverOrigin": "https://couyiju.xyz",
   "serverName": "香港服务器",
+  "preferredEntry": "xyz",
   "entries": [
-    { "id": "sslip", "name": "入口一", "origin": "https://couyiju.47-76-72-151.sslip.io" },
-    { "id": "hk", "name": "入口二", "origin": "https://hk.couyiju-fonjure.dns.army" }
+    { "id": "xyz", "name": "正式入口", "origin": "https://couyiju.xyz" },
+    { "id": "sslip", "name": "备用入口一", "origin": "https://couyiju.47-76-72-151.sslip.io" },
+    { "id": "hk", "name": "备用入口二", "origin": "https://hk.couyiju-fonjure.dns.army" }
   ],
   "maintenance": false,
   "maintenanceMessage": "服务器正在维护，请稍后再来。"

@@ -28,10 +28,19 @@
             <p id="status-detail" class="status-detail" hidden></p>
           </div>
           <div id="entry-options" class="entry-options" role="radiogroup" aria-label="选择游戏入口" aria-describedby="entry-account-note">
-            <label class="entry-option selected" data-entry-id="sslip" data-state="checking">
-              <input type="radio" name="game-entry" value="sslip" checked>
+            <label class="entry-option selected" data-entry-id="xyz" data-state="checking">
+              <input type="radio" name="game-entry" value="xyz" checked>
               <span class="entry-option-body">
-                <span class="entry-option-heading"><strong>入口一</strong><span id="entry-recommend-sslip" class="entry-recommend" hidden>推荐</span></span>
+                <span class="entry-option-heading"><strong>正式入口</strong><span id="entry-recommend-xyz" class="entry-recommend" hidden>推荐</span></span>
+                <span class="entry-domain">couyiju.xyz</span>
+                <span class="entry-option-status"><span class="entry-state-dot" aria-hidden="true"></span><span id="entry-status-xyz">看看通不通…</span></span>
+                <span id="entry-latency-xyz" class="entry-latency">—</span>
+              </span>
+            </label>
+            <label class="entry-option" data-entry-id="sslip" data-state="checking">
+              <input type="radio" name="game-entry" value="sslip">
+              <span class="entry-option-body">
+                <span class="entry-option-heading"><strong>备用入口一</strong><span id="entry-recommend-sslip" class="entry-recommend" hidden>推荐</span></span>
                 <span class="entry-domain">sslip.io</span>
                 <span class="entry-option-status"><span class="entry-state-dot" aria-hidden="true"></span><span id="entry-status-sslip">看看通不通…</span></span>
                 <span id="entry-latency-sslip" class="entry-latency">—</span>
@@ -40,7 +49,7 @@
             <label class="entry-option" data-entry-id="hk" data-state="checking">
               <input type="radio" name="game-entry" value="hk">
               <span class="entry-option-body">
-                <span class="entry-option-heading"><strong>入口二</strong><span id="entry-recommend-hk" class="entry-recommend" hidden>推荐</span></span>
+                <span class="entry-option-heading"><strong>备用入口二</strong><span id="entry-recommend-hk" class="entry-recommend" hidden>推荐</span></span>
                 <span class="entry-domain">dns.army</span>
                 <span class="entry-option-status"><span class="entry-state-dot" aria-hidden="true"></span><span id="entry-status-hk">看看通不通…</span></span>
                 <span id="entry-latency-hk" class="entry-latency">—</span>
@@ -53,12 +62,12 @@
             <div><dt title="从当前浏览器请求服务器到收到状态响应的耗时，受当前网络影响">访问耗时</dt><dd id="server-latency">—</dd></div>
             <div><dt title="当前游戏服务进程的运行时长，发布或重启后重新计时">连续运行</dt><dd id="server-uptime">—</dd></div>
           </dl>
-          <a id="game-link" class="primary-link" href="https://couyiju.47-76-72-151.sslip.io/">进入凑一局</a>
+          <a id="game-link" class="primary-link" href="https://couyiju.xyz/">进入凑一局</a>
           <div class="status-actions">
             <span id="checked-at" class="checked-at">检测中…</span>
             <button id="retry-status" class="text-button" type="button" hidden>重新检测</button>
           </div>
-          <noscript><p class="no-script">当前浏览器未启用 JavaScript，可以直接选择：<a href="https://couyiju.47-76-72-151.sslip.io/">入口一</a> · <a href="https://hk.couyiju-fonjure.dns.army/">入口二</a>。</p></noscript>
+          <noscript><p class="no-script">当前浏览器未启用 JavaScript，可以直接选择：<a href="https://couyiju.xyz/">正式入口</a> · <a href="https://couyiju.47-76-72-151.sslip.io/">备用入口一</a> · <a href="https://hk.couyiju-fonjure.dns.army/">备用入口二</a>。</p></noscript>
           <div class="bookmark-note">
             <strong>记住这个网址就好</strong>
             <p>收藏 <span class="inline-address">fonjure.github.io</span>，以后也从这里找到最新服务器。</p>

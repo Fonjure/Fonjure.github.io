@@ -1,11 +1,12 @@
 (() => {
   'use strict';
-  const DEFAULT_ORIGIN = 'https://couyiju.47-76-72-151.sslip.io';
+  const DEFAULT_ORIGIN = 'https://couyiju.xyz';
   const DEFAULT_ENTRIES = [
-    { id: 'sslip', name: '入口一', origin: DEFAULT_ORIGIN },
-    { id: 'hk', name: '入口二', origin: 'https://hk.couyiju-fonjure.dns.army' },
+    { id: 'xyz', name: '正式入口', origin: DEFAULT_ORIGIN },
+    { id: 'sslip', name: '备用入口一', origin: 'https://couyiju.47-76-72-151.sslip.io' },
+    { id: 'hk', name: '备用入口二', origin: 'https://hk.couyiju-fonjure.dns.army' },
   ];
-  const DEFAULT_CONFIG = { serverOrigin: DEFAULT_ORIGIN, serverName: '香港服务器', maintenance: false, maintenanceMessage: '服务器正在维护，请稍后再来。' };
+  const DEFAULT_CONFIG = { serverOrigin: DEFAULT_ORIGIN, serverName: '香港服务器', preferredEntry: 'xyz', maintenance: false, maintenanceMessage: '服务器正在维护，请稍后再来。' };
   const byId = (id) => document.getElementById(id);
   const status = byId('server-status'), title = byId('status-title'), message = byId('status-message'), detail = byId('status-detail');
   const gameLink = byId('game-link'), retry = byId('retry-status'), checkedAt = byId('checked-at');
@@ -37,7 +38,7 @@
   function normalizeEntries(value) {
     const candidates = Array.isArray(value.entries) ? value.entries : [
       { ...DEFAULT_ENTRIES[0], origin: value.serverOrigin || DEFAULT_ORIGIN },
-      DEFAULT_ENTRIES[1],
+      ...DEFAULT_ENTRIES.slice(1),
     ];
     const valid = [];
     for (const candidate of candidates.slice(0, 8)) {
@@ -90,7 +91,8 @@
     status.setAttribute('aria-busy', state === 'checking' ? 'true' : 'false');
   }
   function recommendedEntry() {
-    return entries.filter((entry) => entry.state === 'online').sort((a, b) => a.elapsed - b.elapsed)[0] || null;
+    const healthy = entries.filter((entry) => entry.state === 'online');
+    return healthy.find((entry) => entry.id === config.preferredEntry) || healthy.sort((a, b) => a.elapsed - b.elapsed)[0] || null;
   }
   function render() {
     const recommended = recommendedEntry();
@@ -154,6 +156,7 @@
       return {
         ...DEFAULT_CONFIG,
         serverName: text(value.serverName, DEFAULT_CONFIG.serverName),
+        preferredEntry: DEFAULT_ENTRIES.some((entry) => entry.id === value.preferredEntry) ? value.preferredEntry : DEFAULT_CONFIG.preferredEntry,
         maintenance: value.maintenance === true,
         maintenanceMessage: text(value.maintenanceMessage, DEFAULT_CONFIG.maintenanceMessage),
         entries: normalizeEntries(value),
@@ -201,6 +204,7 @@
       const next = await readConfig();
       config = next;
       entries = freshEntries(next.entries);
+      if (!manualId && entries.some((entry) => entry.id === config.preferredEntry)) selectedId = config.preferredEntry;
       render();
       if (!config.maintenance) await Promise.all(entries.map(probe));
     } finally {
