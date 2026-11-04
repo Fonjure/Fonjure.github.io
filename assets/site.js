@@ -1,13 +1,21 @@
 (() => {
   'use strict';
   const DEFAULT_ORIGIN = 'https://couyiju.47-76-72-151.sslip.io';
+  const DEFAULT_ENTRIES = [
+    { id: 'sslip', name: '入口一', origin: DEFAULT_ORIGIN },
+    { id: 'hk', name: '入口二', origin: 'https://hk.couyiju-fonjure.dns.army' },
+  ];
   const DEFAULT_CONFIG = { serverOrigin: DEFAULT_ORIGIN, serverName: '香港服务器', maintenance: false, maintenanceMessage: '服务器正在维护，请稍后再来。' };
   const byId = (id) => document.getElementById(id);
   const status = byId('server-status'), title = byId('status-title'), message = byId('status-message'), detail = byId('status-detail');
   const gameLink = byId('game-link'), retry = byId('retry-status'), checkedAt = byId('checked-at');
   const metrics = byId('server-metrics');
+  const options = byId('entry-options');
+  let config = { ...DEFAULT_CONFIG };
+  let entries = freshEntries(DEFAULT_ENTRIES);
+  let selectedId = entries[0].id;
+  let manualId = null;
   let checking = false;
-  let currentOrigin = DEFAULT_ORIGIN;
 
   function serverOrigin(value) {
     if (typeof value !== 'string' || !/^https:\/\/[^\s/?#\\@]+\/?$/i.test(value)) throw new Error('Invalid server origin.');
@@ -24,20 +32,44 @@
   }
   function text(value, fallback) { return typeof value === 'string' && value.trim() ? value.trim().slice(0, 240) : fallback; }
   const nonnegative = (value) => typeof value === 'number' && Number.isFinite(value) && value >= 0;
+  const latency = (elapsed) => nonnegative(elapsed) ? `${Math.max(1, Math.round(elapsed)).toLocaleString('zh-CN')} ms` : '—';
+  function freshEntries(values) { return values.map((entry) => ({ ...entry, state: 'checking', health: null, elapsed: null, maintenanceMessage: '' })); }
+  function normalizeEntries(value) {
+    const candidates = Array.isArray(value.entries) ? value.entries : [
+      { ...DEFAULT_ENTRIES[0], origin: value.serverOrigin || DEFAULT_ORIGIN },
+      DEFAULT_ENTRIES[1],
+    ];
+    const valid = [];
+    for (const candidate of candidates.slice(0, 8)) {
+      try {
+        if (!candidate || typeof candidate !== 'object' || !DEFAULT_ENTRIES.some((entry) => entry.id === candidate.id)) continue;
+        const origin = serverOrigin(candidate.origin);
+        if (valid.some((entry) => entry.id === candidate.id || entry.origin === origin)) continue;
+        const fallback = DEFAULT_ENTRIES.find((entry) => entry.id === candidate.id);
+        valid.push({ id: candidate.id, name: text(candidate.name, fallback.name).slice(0, 40), origin });
+      } catch { /* One invalid entry must not hide another valid entry. */ }
+    }
+    return valid.length ? valid : DEFAULT_ENTRIES;
+  }
+  function clearMetrics() {
+    if (!metrics) return;
+    metrics.hidden = true;
+    ['server-memory', 'server-latency', 'server-uptime'].forEach((id) => { byId(id).textContent = '—'; });
+  }
   function showMetrics(health, elapsed) {
     if (!metrics) return;
     const bytes = health.memory?.rssBytes;
     byId('server-memory').textContent = nonnegative(bytes) ? `${(bytes / 1024 ** 2).toLocaleString('zh-CN', { maximumFractionDigits: 1 })} MB` : '—';
-    byId('server-latency').textContent = nonnegative(elapsed) ? `${Math.max(1, Math.round(elapsed)).toLocaleString('zh-CN')} ms` : '—';
+    byId('server-latency').textContent = latency(elapsed);
     const seconds = health.uptimeSeconds;
     const minutes = nonnegative(seconds) ? Math.floor(seconds / 60) : null;
     byId('server-uptime').textContent = minutes === null ? '—' : minutes < 1 ? '不足 1 分钟' : minutes < 60 ? `${minutes} 分钟`
       : minutes < 1440 ? `${Math.floor(minutes / 60)} 小时` : `${Math.floor(minutes / 1440)} 天 ${Math.floor(minutes / 60) % 24} 小时`;
     metrics.hidden = false;
   }
-  function entryEnabled(enabled, origin = DEFAULT_ORIGIN) {
-    if (enabled) {
-      gameLink.href = destination(origin);
+  function entryEnabled(enabled, entry) {
+    if (enabled && entry) {
+      gameLink.href = destination(entry.origin);
       gameLink.removeAttribute('aria-disabled');
       gameLink.removeAttribute('tabindex');
       gameLink.textContent = '进入凑一局';
@@ -55,17 +87,104 @@
     detail.textContent = explanation;
     status.setAttribute('aria-busy', state === 'checking' ? 'true' : 'false');
   }
-  async function readConfig(signal) {
-    const config = { ...DEFAULT_CONFIG };
-    const response = await fetch(`/site-config.json?t=${Date.now()}`, { cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer', signal });
-    if (!response.ok) throw new Error('Configuration unavailable.');
-    const value = await response.json();
-    if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid configuration.');
-    config.serverOrigin = serverOrigin(value.serverOrigin || DEFAULT_ORIGIN);
-    config.serverName = text(value.serverName, config.serverName);
-    config.maintenance = value.maintenance === true;
-    config.maintenanceMessage = text(value.maintenanceMessage, config.maintenanceMessage);
-    return config;
+  function recommendedEntry() {
+    return entries.filter((entry) => entry.state === 'online').sort((a, b) => a.elapsed - b.elapsed)[0] || null;
+  }
+  function render() {
+    const recommended = recommendedEntry();
+    if (!entries.some((entry) => entry.id === manualId)) manualId = null;
+    if (manualId) selectedId = manualId;
+    else if (recommended) selectedId = recommended.id;
+    else if (!entries.some((entry) => entry.id === selectedId && entry.state !== 'maintenance')) {
+      selectedId = (entries.find((entry) => entry.state !== 'maintenance') || entries[0]).id;
+    }
+    const selected = entries.find((entry) => entry.id === selectedId) || entries[0];
+    for (const fallback of DEFAULT_ENTRIES) {
+      const label = options?.querySelector(`[data-entry-id="${fallback.id}"]`);
+      const input = options?.querySelector(`input[value="${fallback.id}"]`);
+      const entry = entries.find((item) => item.id === fallback.id);
+      if (label) label.hidden = !entry;
+      if (input) {
+        input.disabled = !entry || config.maintenance || entry.state === 'maintenance';
+        input.checked = !!entry && selected.id === entry.id;
+      }
+      if (!entry) continue;
+      if (label) {
+        label.dataset.state = config.maintenance ? 'maintenance' : entry.state;
+        label.classList.toggle('selected', selected.id === entry.id);
+      }
+      const name = byId(`entry-name-${entry.id}`) || label?.querySelector('.entry-name, .entry-option-heading > strong');
+      if (name) name.textContent = entry.name;
+      const state = config.maintenance ? 'maintenance' : entry.state;
+      const stateLabel = byId(`entry-status-${entry.id}`);
+      if (stateLabel) stateLabel.textContent = ({ checking: '检测中…', online: '能连上', unavailable: '暂时不可用', failed: '暂时没连上', maintenance: '维护中' })[state];
+      const entryLatency = byId(`entry-latency-${entry.id}`);
+      if (entryLatency) entryLatency.textContent = latency(entry.elapsed);
+      const badge = byId(`entry-recommend-${entry.id}`);
+      if (badge) badge.hidden = config.maintenance || recommended?.id !== entry.id;
+    }
+    clearMetrics();
+    byId('server-name').textContent = config.serverName;
+    entryEnabled(!config.maintenance && selected.state !== 'maintenance', selected);
+    if (config.maintenance) {
+      show('maintenance', '维护中', '我们很快回来', config.maintenanceMessage);
+    } else if (selected.state === 'online') {
+      show('online', '连接顺畅', '可以开一局了', `${selected.name}已连上，叫上朋友一起玩。${entries.some((entry) => entry.state === 'checking') ? '另一个入口还在检测。' : ''}`);
+      showMetrics(selected.health, selected.elapsed);
+    } else if (selected.state === 'maintenance') {
+      show('maintenance', '这个入口维护中', entries.some((entry) => entry.state !== 'maintenance') ? '换个入口试试' : '我们很快回来', selected.maintenanceMessage || '这个入口正在维护，稍后再来。');
+    } else if (selected.state === 'checking') {
+      show('checking', '正在检测入口', '找条顺畅的路', '检测期间也可以手动选择入口，点击后才会前往游戏。');
+    } else if (selected.state === 'unavailable') {
+      show('unavailable', '这个入口暂不可用', '换个入口试试', '可以选择另一个入口，或稍后重新检测；也可直接尝试进入。');
+    } else {
+      show('failed', '这个入口暂时没连上', '换个入口试试', '可以手动选择入口尝试访问，或点击“重新检测”。');
+    }
+  }
+  async function readConfig() {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2500);
+    try {
+      const response = await fetch(`/site-config.json?t=${Date.now()}`, { cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer', signal: controller.signal });
+      if (!response.ok) throw new Error('Configuration unavailable.');
+      const value = await response.json();
+      if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid configuration.');
+      return {
+        ...DEFAULT_CONFIG,
+        serverName: text(value.serverName, DEFAULT_CONFIG.serverName),
+        maintenance: value.maintenance === true,
+        maintenanceMessage: text(value.maintenanceMessage, DEFAULT_CONFIG.maintenanceMessage),
+        entries: normalizeEntries(value),
+      };
+    } catch { return { ...DEFAULT_CONFIG, entries: DEFAULT_ENTRIES }; }
+    finally { clearTimeout(timeout); }
+  }
+  async function probe(entry) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 7000);
+    const started = performance.now();
+    try {
+      const response = await fetch(`${entry.origin}/health`, { cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer', mode: 'cors', signal: controller.signal });
+      const health = await response.json().catch(() => null);
+      entry.elapsed = performance.now() - started;
+      if (health?.maintenance === true || health?.status === 'maintenance') {
+        entry.state = 'maintenance';
+        entry.maintenanceMessage = text(health.maintenanceMessage || health.message, '这个入口正在维护，稍后再来。');
+      } else if (!response.ok) {
+        entry.state = 'unavailable';
+      } else if (health?.service === 'couyiju-server' && health?.protocol === 1 && health?.runtime === 'node') {
+        entry.state = ['status', 'database', 'rooms', 'storage'].every((key) => health[key] === 'ok') ? 'online' : 'unavailable';
+        if (entry.state === 'online') entry.health = health;
+      } else {
+        entry.state = 'failed';
+      }
+    } catch {
+      entry.state = 'failed';
+      entry.elapsed = null;
+    } finally {
+      clearTimeout(timeout);
+      render();
+    }
   }
   async function checkStatus() {
     if (checking) return;
@@ -73,59 +192,33 @@
     retry.hidden = false;
     retry.disabled = true;
     retry.textContent = '检测中';
-    if (metrics) {
-      metrics.hidden = true;
-      ['server-memory', 'server-latency', 'server-uptime'].forEach((id) => { byId(id).textContent = '—'; });
-    }
+    entries = freshEntries(entries);
     checkedAt.textContent = '点击后才会前往游戏';
-    show('checking', '正在检查', '稍等一下', '正在确认最新服务器的连接状态。');
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 7000);
+    render();
     try {
-      const config = await readConfig(controller.signal);
-      currentOrigin = config.serverOrigin;
-      byId('server-name').textContent = config.serverName;
-      entryEnabled(!config.maintenance, config.serverOrigin);
-      if (config.maintenance) {
-        show('maintenance', '维护中', '我们很快回来', config.maintenanceMessage);
-        return;
-      }
-      const started = performance.now();
-      const response = await fetch(`${config.serverOrigin}/health`, { cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer', mode: 'cors', signal: controller.signal });
-      const health = await response.json().catch(() => null);
-      const elapsed = performance.now() - started;
-      if (health?.maintenance === true || health?.status === 'maintenance') {
-        entryEnabled(false);
-        show('maintenance', '维护中', '我们很快回来', text(health.maintenanceMessage || health.message, '服务器正在维护，请稍后再来。'));
-      } else if (!response.ok) {
-        show('unavailable', '服务暂不可用', '稍后再来试试', '服务器暂时没有正常响应。你可以稍后重新检测，或尝试进入游戏。');
-      } else if (health?.service === 'couyiju-server' && health?.protocol === 1 && health?.runtime === 'node') {
-        if (['status', 'database', 'rooms', 'storage'].every((key) => health[key] === 'ok')) {
-          show('online', '服务器运行正常', '可以开一局了', '叫上朋友，点击下方入口一起玩。');
-          showMetrics(health, elapsed);
-        } else {
-          show('unavailable', '服务暂不可用', '稍后再来试试', '服务器暂时没有恢复正常，请稍后重新检测。');
-        }
-      } else {
-        throw new Error('Unrecognized server response.');
-      }
-    } catch {
-      entryEnabled(true, currentOrigin);
-      show('failed', '连接失败', '请连接梯子', '无法从当前网络确认服务器状态，仍可点击下方入口尝试访问。');
+      const next = await readConfig();
+      config = next;
+      entries = freshEntries(next.entries);
+      render();
+      if (!config.maintenance) await Promise.all(entries.map(probe));
     } finally {
-      clearTimeout(timeout);
       checking = false;
       retry.disabled = false;
       retry.textContent = '重新检测';
       const time = new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit' }).format(new Date());
       checkedAt.textContent = `${time} 更新 · 点击后才会前往游戏`;
+      render();
     }
   }
-  entryEnabled(true);
-  retry.addEventListener('click', checkStatus);
-  window.addEventListener('hashchange', () => {
-    if (gameLink.hasAttribute('href')) gameLink.href = destination(new URL(gameLink.href).origin);
+  options?.addEventListener('change', (event) => {
+    const input = event.target;
+    if (input?.name !== 'game-entry' || input.disabled || !entries.some((entry) => entry.id === input.value)) return;
+    manualId = input.value;
+    selectedId = input.value;
+    render();
   });
+  retry.addEventListener('click', checkStatus);
+  window.addEventListener('hashchange', render);
   byId('copy-id').addEventListener('click', async () => {
     const account = byId('xiaohongshu-id'), feedback = byId('copy-feedback');
     try {
@@ -139,5 +232,6 @@
       feedback.textContent = '已选中小红书号，可长按或手动复制';
     }
   });
+  render();
   checkStatus();
 })();

@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#f5f2eb">
   <meta name="description" content="凑一局总站。查看服务器状态，前往最新游戏入口，也欢迎在小红书关注疯不觉。">
   <title>凑一局总站</title>
-  <link rel="stylesheet" href="/assets/site.css?v=portal-4">
-  <script src="/assets/site.js?v=portal-4" defer></script>
+  <link rel="stylesheet" href="/assets/site.css?v=portal-5">
+  <script src="/assets/site.js?v=portal-5" defer></script>
 </head>
 <body>
   <div class="page">
@@ -25,9 +25,31 @@
           </div>
           <div id="server-status" class="server-status" data-state="failed" aria-live="polite" aria-atomic="true">
             <div class="status-line"><span class="status-dot" aria-hidden="true"></span><strong id="status-title">连接失败</strong></div>
-            <p id="status-message" class="status-message">请连接梯子</p>
-            <p id="status-detail" class="status-detail">暂时无法确认服务器状态，仍可点击下方入口尝试访问。</p>
+            <p id="status-message" class="status-message">换条路，照样开局</p>
+            <p id="status-detail" class="status-detail">看看哪条入口更顺，也可以自己选一条试试。</p>
           </div>
+          <p class="entry-selection-hint">帮你挑条快的，也能自己选。</p>
+          <div id="entry-options" class="entry-options" role="radiogroup" aria-label="选择游戏入口" aria-describedby="entry-account-note">
+            <label class="entry-option selected" data-entry-id="sslip" data-state="checking">
+              <input type="radio" name="game-entry" value="sslip" checked>
+              <span class="entry-option-body">
+                <span class="entry-option-heading"><strong>入口一</strong><span id="entry-recommend-sslip" class="entry-recommend" hidden>推荐</span></span>
+                <span class="entry-domain">sslip.io</span>
+                <span class="entry-option-status"><span class="entry-state-dot" aria-hidden="true"></span><span id="entry-status-sslip">看看通不通…</span></span>
+                <span id="entry-latency-sslip" class="entry-latency">—</span>
+              </span>
+            </label>
+            <label class="entry-option" data-entry-id="hk" data-state="checking">
+              <input type="radio" name="game-entry" value="hk">
+              <span class="entry-option-body">
+                <span class="entry-option-heading"><strong>入口二</strong><span id="entry-recommend-hk" class="entry-recommend" hidden>推荐</span></span>
+                <span class="entry-domain">dns.army</span>
+                <span class="entry-option-status"><span class="entry-state-dot" aria-hidden="true"></span><span id="entry-status-hk">看看通不通…</span></span>
+                <span id="entry-latency-hk" class="entry-latency">—</span>
+              </span>
+            </label>
+          </div>
+          <p id="entry-account-note" class="entry-account-note">同一款游戏，换入口需重新登录账号，游客身份不会自动带过去。</p>
           <dl id="server-metrics" class="server-metrics" aria-label="服务器运行概况" hidden>
             <div><dt title="游戏服务进程当前使用的物理内存，不是整台服务器的内存占用">游戏进程内存</dt><dd id="server-memory">—</dd></div>
             <div><dt title="从当前浏览器请求服务器到收到状态响应的耗时，受当前网络影响">访问耗时</dt><dd id="server-latency">—</dd></div>
@@ -38,7 +60,7 @@
             <span id="checked-at" class="checked-at">点击后才会前往游戏</span>
             <button id="retry-status" class="text-button" type="button" hidden>重新检测</button>
           </div>
-          <noscript><p class="no-script">请连接梯子。当前浏览器未启用 JavaScript，可以直接点击上方入口进入游戏。</p></noscript>
+          <noscript><p class="no-script">当前浏览器未启用 JavaScript，可以直接选择：<a href="https://couyiju.47-76-72-151.sslip.io/">入口一</a> · <a href="https://hk.couyiju-fonjure.dns.army/">入口二</a>。</p></noscript>
           <div class="bookmark-note">
             <strong>记住这个网址就好</strong>
             <p>收藏 <span class="inline-address">fonjure.github.io</span>，以后也从这里找到最新服务器。</p>
