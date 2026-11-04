@@ -68,4 +68,4 @@ Windows PowerShell 中可用已安装的静态 HTTP 服务预览此目录；不�
 
 发布前检查 JSON、脚本语法、手机布局、无 JavaScript 回退、健康/维护/连接失败状态和邀请链接保留。将所需文件提交并推送到本仓库 `main`，等待 GitHub Pages 部署成功；再检查线上总站没有自动跳走、图片与手动进入按钮正常。
 
-小红书名片替换时应保留原始二维码。更新 HTML/CSS/JS 后，必要时递增 HTML 中的静态资源版本（当前 `?v=portal-7`）；`404.html` 与 `index.html` 保持一致。
+小红书名片替换时应保留原始二维码。更新 HTML/CSS/JS 后，必要时递增 HTML 中的静态资源版本（当前 `?v=portal-8`）；`404.html` 与 `index.html` 保持一致。
